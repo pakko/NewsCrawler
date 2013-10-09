@@ -1,70 +1,72 @@
 package com.ml.task;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ml.model.CrawlPattern;
-import com.ml.nlp.crawler.Crawler;
+import com.ml.model.News;
 import com.ml.nlp.parser.IParser;
 import com.ml.nlp.parser.SinaNewsParser;
 import com.ml.nlp.parser.SohuNewsParser;
-import com.ml.queue.QueueBucket;
+import com.ml.util.QueueBucket;
 
-public class ParserTask extends Thread {
-	private List<CrawlPattern> crawlList;   //待爬url
+public class ParserTask implements Runnable {
+	private static final Logger logger = LoggerFactory.getLogger(ParserTask.class);
+
+	
+	private CrawlPattern cp;   //待爬url
     private QueueBucket queues;  //通过QueueBucket得到links队列
+    private Set<String> visitedUrl; //已访问过的url
     
-    public ParserTask(List<CrawlPattern> crawlList, QueueBucket queues) {
-        this.crawlList = crawlList;
+    public ParserTask(CrawlPattern cp, QueueBucket queues, Set<String> visitedUrl) {
+        this.cp = cp;
         this.queues = queues;
+        this.visitedUrl = visitedUrl;
     }
 
     public void run() {
-    	for(CrawlPattern cp: crawlList) {
-			String queueName = cp.getCrawlUrl();
-			String type = cp.getType();
-			IParser<?> parser = getParser(type);
-			
+    	String queueName = cp.getCrawlUrl();
+		String type = cp.getType();
+		IParser<?> parser = getParser(type);
+		
+		while (true) {
 			doParser(parser, queueName);
 		}
     }
     
     private void doParser(IParser<?> parser, String queueName) {
     	Queue<String> queue = queues.get(queueName);
-    	int timer = 0; //超时计时器
-/*
-        while(timer < 30) { //如果连续30分钟bookQueue均为空,则超时,线程结束
-            if(queue.size() != 0) { //如果队列不为空
-                Book book;
-                while((book = queue.poll()) != null) {
-                    System.out.println(book.getBookName()); //把这步当成插入数据库吧
-                }
-                timer = 0;  //超时计时器清零
-            } else {
-                try {
-                    sleep(60 * 1000);   //等待爬虫一分钟
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                timer++;    //timer时间+1
+    	int analyzedNum = 0;
+        if(queue.size() != 0) { //如果队列不为空
+            String url;
+            Queue<News> parserQueue = queues.get("parserQueue");
+            while((url = queue.poll()) != null) {
+            	News news = (News) parser.parse(url);
+            	// 该 url 放入到已访问的 URL 中
+            	visitedUrl.add(url);
+            	if(news == null || news.getDate() == null || 
+    					news.getTitle() == null || news.getContent() == null) {
+    				continue;
+    			}
+            	//http://it.sohu.com -> it
+    			news.setOriginalCategory(queueName.substring(queueName.indexOf("/") + 2, queueName.indexOf(".")));
+    			// 放到待分析队列
+    			parserQueue.add(news);
+            }
+            analyzedNum = parserQueue.size();
+        } else {
+            try {
+            	logger.info("sleep 20s...");
+                Thread.sleep(20 * 1000);   //等待爬虫一分钟
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
-			News news = (News) parser.parse(visitUrl);
-			
-			// 该 url 放入到已访问的 URL 中
-			LinkDB.addVisitedUrl(visitUrl);
-						
-			if(news == null || news.getDate() == null || 
-					news.getTitle() == null || news.getContent() == null) {
-				continue;
-			}
-			
-			//http://it.sohu.com -> it
-			news.setOriginalCategory(queueName.substring(queueName.indexOf("/") + 2, queueName.indexOf(".")));
-*/
+		logger.info("parser queue size: " + analyzedNum);
+
 	}
 	
 	private IParser<?> getParser(String name) {

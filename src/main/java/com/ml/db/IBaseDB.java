@@ -1,6 +1,7 @@
 package com.ml.db;
 
 
+import java.util.Collection;
 import java.util.List;
 
 
@@ -24,5 +25,7 @@ public interface IBaseDB {
 	<T> List<T> findAll(Object entity, String collectionName);
 	
 	long count(Object query, String collectionName);
+	
+	void insert(Collection<? extends Object> batchToSave, String collectionName);
 
 }

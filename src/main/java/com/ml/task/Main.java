@@ -10,14 +10,19 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ml.db.MongoDB;
 import com.ml.model.CrawlPattern;
-import com.ml.queue.QueueBucket;
 import com.ml.util.Constants;
+import com.ml.util.QueueBucket;
 
 public class Main {
 	private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -37,11 +42,13 @@ public class Main {
 	
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException  {
 		Main main = new Main();
-		MongoDB mongodb = main.getDB();
 		
+		//1, get crawl list
+		MongoDB mongodb = main.getDB();
 		List<CrawlPattern> crawlList = mongodb.findAll(CrawlPattern.class, 
 				Constants.crawlPatternCollectionName);
 
+		//2, initial queues
 		QueueBucket queues = new QueueBucket();
 		for(CrawlPattern cp: crawlList) {
 			String crawlUrl = cp.getCrawlUrl();
@@ -50,14 +57,30 @@ public class Main {
         queues.add("parserQueue", ConcurrentLinkedQueue.class);
         queues.add("analyzerQueue", ConcurrentLinkedQueue.class);
         
+        //3, schedule crawler to run  
         Set<String> visitedUrl = new HashSet<String>();
+        CrawlerTask ct = new CrawlerTask(crawlList, queues, visitedUrl);
         
-		CrawlerTask ct = new CrawlerTask(crawlList, queues);
+		long initialDelay = 1;
+		long delay = 10;
+		int threadPoolNum = 2;
+        // 从现在开始1秒钟之后，每隔10秒钟执行一次job
+		ScheduledExecutorService scheduledService = Executors.newScheduledThreadPool(threadPoolNum);
+		scheduledService.scheduleWithFixedDelay(ct, initialDelay, delay, TimeUnit.SECONDS);
 		
-		for(int i = 0; i < crawlList.size(); i++) {
-			ParserTask pt = new ParserTask(crawlList, queues);
-		}
+		//4, add several thread to parse url
+/*		ExecutorService service = Executors.newCachedThreadPool();
+		for(CrawlPattern cp: crawlList) {
+			ParserTask pt = new ParserTask(cp, queues, visitedUrl);
+			service.execute(pt);
+        }
 		
+		//5, insert news to db
+		//ExecutorService insertService = Executors.newSingleThreadExecutor();
+		InsertTask it = new InsertTask(mongodb, queues);
+		//insertService.execute(it);
+		service.execute(it);*/
+
 	}
 
 }

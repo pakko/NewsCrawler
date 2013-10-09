@@ -59,6 +59,7 @@ public class HtmlParser {
 						links.add(frameUrl);
 				}
 			}
+			list.removeAll();
 		} catch (ParserException e) {
 			e.printStackTrace();
 		}

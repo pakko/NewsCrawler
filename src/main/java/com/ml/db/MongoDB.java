@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 
@@ -53,6 +54,11 @@ public class MongoDB implements IBaseDB {
 	@Override
 	public void save(Object entity, String collectionName) {
 		mongoTemplate.save(entity, collectionName);
+	}
+	
+	@Override
+	public void insert(Collection<? extends Object> batchToSave, String collectionName) {
+		mongoTemplate.insert(batchToSave, collectionName);
 	}
 
 	@Override
