@@ -11,6 +11,8 @@ import com.ml.model.News;
 import com.ml.nlp.parser.IParser;
 import com.ml.nlp.parser.SinaNewsParser;
 import com.ml.nlp.parser.SohuNewsParser;
+import com.ml.qevent.QueueListenerManager;
+import com.ml.util.Constants;
 import com.ml.util.QueueBucket;
 
 public class ParserTask implements Runnable {
@@ -39,7 +41,7 @@ public class ParserTask implements Runnable {
     
     private void doParser(IParser<?> parser, String queueName) {
     	Queue<String> queue = queues.get(queueName);
-        Queue<News> parserQueue = queues.get("parserQueue");
+        Queue<News> parserQueue = queues.get(Constants.parserQueueName);
     	String url;
     	
     	if(queue.size() != 0) {
@@ -58,7 +60,8 @@ public class ParserTask implements Runnable {
             	
             	// 4) 设置该新闻的原来类别, for test
             	//http://it.sohu.com -> it
-    			news.setOriginalCategory(queueName.substring(queueName.indexOf("/") + 2, queueName.indexOf(".")));
+    			news.setOriginalCategory(queueName.substring(queueName.indexOf("/") + 2, 
+    					queueName.indexOf(".")));
     			
     			// 5) 放到待分析队列
     			parserQueue.offer(news);

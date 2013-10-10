@@ -33,6 +33,7 @@ public abstract class AbstractNewsParser implements IParser<News> {
 		News news = null;
 		try{
 			Parser parser = new Parser(url);
+			parser.setEncoding("GBK");
 	        NewsNodeFilters nodeFilters = getNodeFilters();
 	        
 	        title = getTitle(nodeFilters.getTitleFilter(), parser);

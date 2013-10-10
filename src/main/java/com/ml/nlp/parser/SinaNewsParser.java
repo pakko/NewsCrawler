@@ -17,7 +17,7 @@ import org.htmlparser.util.ParserException;
 import com.ml.model.News;
 
 /**
- * 用于对搜狐网站上的新闻进行抓取
+ * 用于对新浪网站上的新闻进行抓取
  */
 public class SinaNewsParser extends AbstractNewsParser {
 	
@@ -37,30 +37,22 @@ public class SinaNewsParser extends AbstractNewsParser {
 
     /**
      * 获得新闻的责任编辑，也就是作者。
-     * <div class="editer"><\/div>
      */
     protected String getAuthor(NodeFilter authorFilter, Parser parser) throws ParserException {
         String newsAuthor = "";
-        NodeList authorList = (NodeList) parser.parse(authorFilter);
-        for (int i = 0; i < authorList.size(); i++) {
-            Div authorSpan = (Div) authorList.elementAt(i);
-            newsAuthor = authorSpan.getStringText();
-        }
-        newsAuthor = newsAuthor.replaceAll("[(责任编辑：]", "");
-        newsAuthor = newsAuthor.replaceAll("[)]", "");
         return newsAuthor;
 
     }
 
     /**
      * 获得新闻的日期
-     * <div class="time" itemprop="datePublished" content="2013-08-07T15:07:00+08:00">2013年08月07日15:07<\/div>
+     * <span id="pub_date">2013年10月10日 07:21</span>
      */
     protected String getDate(NodeFilter dateFilter, Parser parser) throws ParserException {
         String newsDate = "";
         NodeList dateList = (NodeList) parser.parse(dateFilter);
         for (int i = 0; i < dateList.size(); i++) {
-        	Div dateTag = (Div) dateList.elementAt(i);
+        	Span dateTag = (Span) dateList.elementAt(i);
             newsDate = dateTag.getStringText();
         }
         return newsDate;
@@ -68,7 +60,7 @@ public class SinaNewsParser extends AbstractNewsParser {
 
     /**
      * 获取新闻的内容
-     * <div itemprop="articleBody">...<\/div>
+     * <div class="BSHARE_POP blkContainerSblkCon clearfix blkContainerSblkCon_14" id="artibody">
      */
     protected String getContent(NodeFilter contentFilter, Parser parser) throws ParserException {
         StringBuilder builder = new StringBuilder();
@@ -86,7 +78,7 @@ public class SinaNewsParser extends AbstractNewsParser {
             sb.setCollapse(true);
             parser.visitAllNodesWith(sb);
             content = sb.getStrings();
-            content = content.replaceAll("\\\".*[a-z].*\\}", "");
+            //content = content.replaceAll("\\\".*[a-z].*\\}", "");
 
         } else {
            System.out.println("没有得到新闻内容！");
@@ -125,7 +117,7 @@ public class SinaNewsParser extends AbstractNewsParser {
 	
 	/**
      * 获取新闻的来源
-     * <span id="media_span" itemprop="publisher"><span itemprop="name">新华网<\/span><\/span>
+     * <span id="media_name">法制文萃报&nbsp;</span>
      */
 	protected String getSource(NodeFilter sourceFilter, Parser parser) throws ParserException {
 		String source = "";
@@ -134,19 +126,20 @@ public class SinaNewsParser extends AbstractNewsParser {
             Span sourceTag = (Span) sourceList.elementAt(i);
             Node node = sourceTag.childAt(0);
             source = node.toPlainTextString();
+            source = source.replace("&nbsp;", "");
         }
         return source;
 	}
 
 	protected NewsNodeFilters getNodeFilters() {
-        NodeFilter titleFilter = new AndFilter(new TagNameFilter("h1"), new HasAttributeFilter("itemprop", "headline"));
-        NodeFilter contentFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("itemprop", "articleBody"));
-        NodeFilter dateFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("itemprop", "datePublished"));
-        NodeFilter authorFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("class", "editer"));
-        NodeFilter imgFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("itemprop", "articleBody"));
-        NodeFilter sourceFilter = new AndFilter(new TagNameFilter("span"), new HasAttributeFilter("itemprop", "publisher"));
+        NodeFilter titleFilter = new AndFilter(new TagNameFilter("h1"), new HasAttributeFilter("id", "artibodyTitle"));
+        NodeFilter contentFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("id", "artibody"));
+        NodeFilter dateFilter = new AndFilter(new TagNameFilter("span"), new HasAttributeFilter("id", "pub_date"));
+        //NodeFilter authorFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("class", "editer"));
+        NodeFilter imgFilter = new AndFilter(new TagNameFilter("div"), new HasAttributeFilter("id", "artibody"));
+        NodeFilter sourceFilter = new AndFilter(new TagNameFilter("span"), new HasAttributeFilter("id", "media_name"));
         
-        NewsNodeFilters nodeFilters = new NewsNodeFilters(titleFilter, contentFilter, dateFilter, authorFilter, imgFilter, sourceFilter);
+        NewsNodeFilters nodeFilters = new NewsNodeFilters(titleFilter, contentFilter, dateFilter, null, imgFilter, sourceFilter);
 		return nodeFilters;
 	}
 
@@ -156,7 +149,7 @@ public class SinaNewsParser extends AbstractNewsParser {
     //单个文件测试网页
     public static void main(String[] args) throws ParserException {
         SinaNewsParser sina = new SinaNewsParser();
-        News news = sina.parse("http://news.sohu.com/20130807/n383602425.shtml");
+        News news = sina.parse("http://book.sina.com.cn/news/c/2013-10-10/1902547263.shtml");
         System.out.println(news.toString());
     }
 

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ml.model.CrawlPattern;
 import com.ml.nlp.crawler.Crawler;
+import com.ml.qevent.QueueListenerManager;
 import com.ml.util.QueueBucket;
 
 public class CrawlerTask implements Runnable {

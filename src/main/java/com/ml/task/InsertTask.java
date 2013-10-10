@@ -26,7 +26,9 @@ public class InsertTask implements Runnable {
     }
 
     public void run() {
-        Queue<News> parserQueue = queues.get("parserQueue");
+        Queue<News> parserQueue = queues.get(Constants.parserQueueName);
+        if(parserQueue.size() == 0)
+        	return;
         logger.info("insert news to db, queue size: " + parserQueue.size());
         while (parserQueue.size() != 0) {
         	mongodb.save(parserQueue.poll(), Constants.newsCollectionName);

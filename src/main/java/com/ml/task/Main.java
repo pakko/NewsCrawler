@@ -1,7 +1,6 @@
 package com.ml.task;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -14,16 +13,24 @@ import java.util.concurrent.TimeUnit;
 
 import com.ml.db.MongoDB;
 import com.ml.model.CrawlPattern;
+import com.ml.qevent.InsertListener;
+import com.ml.qevent.ParserListener;
+import com.ml.qevent.QueueListenerManager;
 import com.ml.util.Constants;
 import com.ml.util.QueueBucket;
 
 public class Main {
 	
-	public static void main(String[] args) throws InstantiationException, IllegalAccessException  {
-		Main main = new Main();
-		
+	public static void main(String[] args) throws Exception  {
+		String confFile = Constants.defaultConfigFile;
+		if(args.length > 0) {
+			confFile = args[0];
+		}
+		Properties props = new Properties();
+		props.load(new FileInputStream(confFile));
+		MongoDB mongodb = new MongoDB(props);
+
 		//1, get crawl list
-		MongoDB mongodb = main.getDB();
 		List<CrawlPattern> crawlList = mongodb.findAll(CrawlPattern.class, 
 				Constants.crawlPatternCollectionName);
 
@@ -33,12 +40,12 @@ public class Main {
 			String crawlUrl = cp.getCrawlUrl();
 			queues.add(crawlUrl, ConcurrentLinkedQueue.class);
         }
-        queues.add("parserQueue", ConcurrentLinkedQueue.class);
-        queues.add("analyzerQueue", ConcurrentLinkedQueue.class);
+        queues.add(Constants.parserQueueName, ConcurrentLinkedQueue.class);
         
         //3, add listener
         Set<String> visitedUrl = new HashSet<String>();
-        ExecutorService service = Executors.newCachedThreadPool();
+        int fixedThreadPoolNum = Integer.valueOf(props.getProperty("fixed.thread_pool_num"));
+        ExecutorService service = Executors.newFixedThreadPool(fixedThreadPoolNum);
         
         QueueListenerManager manager = new QueueListenerManager();
         manager.addQueueListener(new ParserListener(crawlList, queues, visitedUrl, manager, service));
@@ -47,26 +54,14 @@ public class Main {
         //4, schedule crawler to run  
         CrawlerTask ct = new CrawlerTask(crawlList, queues, visitedUrl, manager);
         
-		long initialDelay = 1;
-		long delay = 10;
-		int threadPoolNum = 2;
-        // 从现在开始1秒钟之后，每隔10秒钟执行一次job
-		ScheduledExecutorService scheduledService = Executors.newScheduledThreadPool(threadPoolNum);
-		scheduledService.scheduleWithFixedDelay(ct, initialDelay, delay, TimeUnit.SECONDS);
+		long initialDelay = Long.valueOf(props.getProperty("schedule.initial_elay"));
+		long delay = Long.valueOf(props.getProperty("schedule.delay"));
+		int threadPoolNum = Integer.valueOf(props.getProperty("schedule.thread_pool_num"));
 
-	}
-	
-	private MongoDB getDB() {
-		String confFile = Constants.defaultConfigFile;
-		Properties props = new Properties();
-		try {
-			props.load(new FileInputStream(confFile));
-		} catch (IOException e) {
-			System.out.println(e.toString());
-			return null;
-		}
-		MongoDB mongodb = new MongoDB(props);
-		return mongodb;
+        // 从现在开始1分钟之后，每隔1小时执行一次job
+		ScheduledExecutorService scheduledService = Executors.newScheduledThreadPool(threadPoolNum);
+		scheduledService.scheduleWithFixedDelay(ct, initialDelay, delay, TimeUnit.MINUTES);
+
 	}
 
 }
