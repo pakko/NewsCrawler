@@ -17,11 +17,14 @@ public class CrawlerTask implements Runnable {
     private List<CrawlPattern> crawlList;   //待爬url
     private QueueBucket queues;  //通过QueueBucket得到links队列
     private Set<String> visitedUrl; //已访问过的url
+    private QueueListenerManager manager;
     
-    public CrawlerTask(List<CrawlPattern> crawlList, QueueBucket queues, Set<String> visitedUrl) {
+    public CrawlerTask(List<CrawlPattern> crawlList, QueueBucket queues, 
+    		Set<String> visitedUrl, QueueListenerManager manager) {
         this.crawlList = crawlList;
         this.queues = queues;
         this.visitedUrl = visitedUrl;
+        this.manager = manager;
     }
 
     @Override
@@ -30,8 +33,12 @@ public class CrawlerTask implements Runnable {
         for(CrawlPattern cp: crawlList) {
 			String crawlUrl = cp.getCrawlUrl();
 			String crawPattern = cp.getPatternUrl();
+			
+			//crawling news
     		Set<String> links = crawler.crawlingNews(crawlUrl, crawPattern);
     		Queue<String> q = queues.get(crawlUrl);
+    		int qSize = q.size();
+    		//add to queue
     		for(String link: links) {
     			if (link != null && !link.trim().equals("")
     					 && !visitedUrl.contains(link)
@@ -39,9 +46,14 @@ public class CrawlerTask implements Runnable {
     				q.offer(link);
     			}
     		}
+    		if(q.size() > 0 && q.size() != qSize) {
+    			//notify parser to run
+    	        manager.fireWorkspaceCommand("take_crawler");
+    		}
     		links.clear();
         }
         printInfo();
+        
     }
 
 	private void printInfo() {

@@ -16,15 +16,17 @@ import com.ml.util.QueueBucket;
 public class ParserTask implements Runnable {
 	private static final Logger logger = LoggerFactory.getLogger(ParserTask.class);
 
-	
 	private CrawlPattern cp;   //待爬url
-    private QueueBucket queues;  //通过QueueBucket得到links队列
-    private Set<String> visitedUrl; //已访问过的url
+    private QueueBucket queues;
+    private Set<String> visitedUrl;
+    private QueueListenerManager manager;
     
-    public ParserTask(CrawlPattern cp, QueueBucket queues, Set<String> visitedUrl) {
+    public ParserTask(CrawlPattern cp, QueueBucket queues, 
+    		Set<String> visitedUrl, QueueListenerManager manager) {
         this.cp = cp;
         this.queues = queues;
         this.visitedUrl = visitedUrl;
+        this.manager = manager;
     }
 
     public void run() {
@@ -32,41 +34,41 @@ public class ParserTask implements Runnable {
 		String type = cp.getType();
 		IParser<?> parser = getParser(type);
 		
-		while (true) {
-			doParser(parser, queueName);
-		}
+		doParser(parser, queueName);
     }
     
     private void doParser(IParser<?> parser, String queueName) {
     	Queue<String> queue = queues.get(queueName);
-    	int analyzedNum = 0;
-        if(queue.size() != 0) { //如果队列不为空
-            String url;
-            Queue<News> parserQueue = queues.get("parserQueue");
-            while((url = queue.poll()) != null) {
+        Queue<News> parserQueue = queues.get("parserQueue");
+    	String url;
+    	
+    	if(queue.size() != 0) {
+    		while((url = queue.poll()) != null) {
+            	//1) parse url
             	News news = (News) parser.parse(url);
-            	// 该 url 放入到已访问的 URL 中
+            	
+            	// 2) 将该 url 放入到已访问的 URL 中
             	visitedUrl.add(url);
+            	
+            	// 3) news为空则不放入分析队列
             	if(news == null || news.getDate() == null || 
     					news.getTitle() == null || news.getContent() == null) {
     				continue;
     			}
+            	
+            	// 4) 设置该新闻的原来类别, for test
             	//http://it.sohu.com -> it
     			news.setOriginalCategory(queueName.substring(queueName.indexOf("/") + 2, queueName.indexOf(".")));
-    			// 放到待分析队列
-    			parserQueue.add(news);
+    			
+    			// 5) 放到待分析队列
+    			parserQueue.offer(news);
             }
-            analyzedNum = parserQueue.size();
-        } else {
-            try {
-            	logger.info("sleep 20s...");
-                Thread.sleep(20 * 1000);   //等待爬虫一分钟
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-		logger.info("parser queue size: " + analyzedNum);
-
+    		logger.info("parser queue size: " + parserQueue.size());
+    		
+    		//notify insert task
+    		manager.fireWorkspaceCommand("take_parser");
+    	}
+        
 	}
 	
 	private IParser<?> getParser(String name) {

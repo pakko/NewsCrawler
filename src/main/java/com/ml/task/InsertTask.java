@@ -27,26 +27,9 @@ public class InsertTask implements Runnable {
 
     public void run() {
         Queue<News> parserQueue = queues.get("parserQueue");
-        while (true) {
-        	if(parserQueue.size() > 0) {
-        		mongodb.save(parserQueue.poll(), Constants.newsCollectionName);
-        		/*synchronized (list) {
-        			list.add(parserQueue.poll());
-        			if (list.size() == 100) {
-        				logger.info("insert into db, size: " + list.size());
-        				mongodb.insert(list, Constants.newsCollectionName);
-        				list.clear();
-        			}
-        		}*/
-        	}
-        	else {
-        		try {
-	            	logger.info("sleep 10s...");
-	                Thread.sleep(10 * 1000);   //等待爬虫一分钟
-	            } catch (InterruptedException e) {
-	                e.printStackTrace();
-	            }
-        	}
+        logger.info("insert news to db, queue size: " + parserQueue.size());
+        while (parserQueue.size() != 0) {
+        	mongodb.save(parserQueue.poll(), Constants.newsCollectionName);
 		}
     }
 }
