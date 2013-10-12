@@ -54,7 +54,7 @@ public class Main {
         //4, schedule crawler to run  
         CrawlerTask ct = new CrawlerTask(crawlList, queues, visitedUrl, manager);
         
-		long initialDelay = Long.valueOf(props.getProperty("schedule.initial_elay"));
+		long initialDelay = Long.valueOf(props.getProperty("schedule.initial.delay"));
 		long delay = Long.valueOf(props.getProperty("schedule.delay"));
 		int threadPoolNum = Integer.valueOf(props.getProperty("schedule.thread_pool_num"));
 
