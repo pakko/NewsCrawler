@@ -11,8 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+
 import com.ml.db.MongoDB;
 import com.ml.model.CrawlPattern;
+import com.ml.model.News;
 import com.ml.qevent.InsertListener;
 import com.ml.qevent.ParserListener;
 import com.ml.qevent.QueueListenerManager;
@@ -42,8 +46,17 @@ public class Main {
         }
         queues.add(Constants.parserQueueName, ConcurrentLinkedQueue.class);
         
-        //3, add listener
+        //3, set visited url
         Set<String> visitedUrl = new HashSet<String>();
+        Query query = new Query();
+		query.addCriteria(Criteria.where("categoryId").exists(true));
+		List<News> newsList = mongodb.find(query, News.class, Constants.newsCollectionName);
+		System.out.println("Visited url size: " + newsList.size());
+		for(News news: newsList) {
+			visitedUrl.add(news.getUrl());
+		}
+		
+        //4, add listener
         int fixedThreadPoolNum = Integer.valueOf(props.getProperty("fixed.thread_pool_num"));
         ExecutorService service = Executors.newFixedThreadPool(fixedThreadPoolNum);
         
@@ -51,7 +64,7 @@ public class Main {
         manager.addQueueListener(new ParserListener(crawlList, queues, visitedUrl, manager, service));
         manager.addQueueListener(new InsertListener(mongodb, queues, service));
 
-        //4, schedule crawler to run  
+        //5, schedule crawler to run  
         CrawlerTask ct = new CrawlerTask(crawlList, queues, visitedUrl, manager);
         
 		long initialDelay = Long.valueOf(props.getProperty("schedule.initial.delay"));
