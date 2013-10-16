@@ -34,12 +34,12 @@ public class ParserTask implements Runnable {
     public void run() {
     	String queueName = cp.getCrawlUrl();
 		String type = cp.getType();
-		IParser<?> parser = getParser(type);
+		IParser<News> parser = getParser(type);
 		
 		doParser(parser, queueName);
     }
     
-    private void doParser(IParser<?> parser, String queueName) {
+    private void doParser(IParser<News> parser, String queueName) {
     	Queue<String> queue = queues.get(queueName);
         Queue<News> parserQueue = queues.get(Constants.parserQueueName);
     	String url;
@@ -47,14 +47,14 @@ public class ParserTask implements Runnable {
     	if(queue.size() != 0) {
     		while((url = queue.poll()) != null) {
             	//1) parse url
-            	News news = (News) parser.parse(url);
+            	News news = parser.parse(url);
             	
             	// 2) 将该 url 放入到已访问的 URL 中
             	visitedUrl.add(url);
             	
             	// 3) news为空则不放入分析队列
             	if(news == null || news.getDate() == null || 
-    					news.getTitle() == null || news.getContent() == null) {
+    					news.getTitle() == null || news.getTitle().trim().equals("") || news.getContent() == null) {
     				continue;
     			}
             	
@@ -74,8 +74,8 @@ public class ParserTask implements Runnable {
         
 	}
 	
-	private IParser<?> getParser(String name) {
-		IParser<?> parser = null;
+	private IParser<News> getParser(String name) {
+		IParser<News> parser = null;
 		
 		if(name.equals("sohu")) {
 			parser = new SohuNewsParser();

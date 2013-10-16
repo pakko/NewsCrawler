@@ -1,5 +1,11 @@
 package com.ml.nlp.parser;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+
 import org.htmlparser.Node;
 import org.htmlparser.NodeFilter;
 import org.htmlparser.Parser;
@@ -14,7 +20,9 @@ import org.htmlparser.tags.Span;
 import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 
+import com.ml.db.MongoDB;
 import com.ml.model.News;
+import com.ml.util.Constants;
 
 /**
  * 用于对新浪网站上的新闻进行抓取
@@ -54,6 +62,15 @@ public class SinaNewsParser extends AbstractNewsParser {
         for (int i = 0; i < dateList.size(); i++) {
         	Span dateTag = (Span) dateList.elementAt(i);
             newsDate = dateTag.getStringText();
+        }
+        NodeFilter dateFilter2 = new AndFilter(new TagNameFilter("span"), new HasAttributeFilter("class", "t2_time"));
+        if(newsDate.equals("")) {
+        	parser.reset();
+        	NodeList dateList2 = (NodeList) parser.parse(dateFilter2);
+            for (int i = 0; i < dateList2.size(); i++) {
+            	Span dateTag = (Span) dateList2.elementAt(i);
+                newsDate = dateTag.getStringText();
+            }
         }
         return newsDate;
     }
@@ -147,10 +164,21 @@ public class SinaNewsParser extends AbstractNewsParser {
     
 
     //单个文件测试网页
-    public static void main(String[] args) throws ParserException {
+    public static void main(String[] args) throws ParserException, FileNotFoundException, IOException {
         SinaNewsParser sina = new SinaNewsParser();
-        News news = sina.parse("http://book.sina.com.cn/news/c/2013-10-10/1902547263.shtml");
+        News news = sina.parse("http://tech.sina.com.cn/it/2013-10-15/10128817508.shtml");
         System.out.println(news.toString());
+        
+        String confFile = Constants.defaultConfigFile;
+		if(args.length > 0) {
+			confFile = args[0];
+		}
+		Properties props = new Properties();
+		props.load(new FileInputStream(confFile));
+		MongoDB mongodb = new MongoDB(props);
+		mongodb.save(news, "news3");
+		List<News> list = mongodb.findAll(News.class, "news3");
+		System.out.println(list.toString());
     }
 
 }

@@ -65,6 +65,15 @@ public class SohuNewsParser extends AbstractNewsParser {
         	Div dateTag = (Div) dateList.elementAt(i);
             newsDate = dateTag.getStringText();
         }
+        NodeFilter dateFilter2 = new AndFilter(new TagNameFilter("span"), new HasAttributeFilter("class", "time"));
+        if(newsDate.equals("")) {
+        	parser.reset();
+        	NodeList dateList2 = (NodeList) parser.parse(dateFilter2);
+            for (int i = 0; i < dateList2.size(); i++) {
+            	Span dateTag = (Span) dateList2.elementAt(i);
+                newsDate = dateTag.getStringText();
+            }
+        }
         return newsDate;
     }
 
@@ -178,8 +187,8 @@ public class SohuNewsParser extends AbstractNewsParser {
 
     //单个文件测试网页
     public static void main(String[] args) throws ParserException {
-        SohuNewsParser sohu = new SohuNewsParser();
-        News news = sohu.parse("http://it.sohu.com/20130813/n384009698.shtml");
+        IParser<News> sohu = new SohuNewsParser();
+        News news = sohu.parse("http://business.sohu.com/20131016/n388284305.shtml");
         System.out.println(news.toString());
     }
 

@@ -69,6 +69,9 @@ public abstract class AbstractNewsParser implements IParser<News> {
      */
     private News setNews(String title, String author, String content, String date, String url, String img, String source) {
     	News news = new News();
+    	if(title.contains("<img")) {
+    		 title = title.substring(title.indexOf(">") + 1);
+    	}
     	news.setTitle(title);
     	news.setAuthor(author);
     	news.setContent(content);	//compress content
