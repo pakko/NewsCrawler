@@ -1,8 +1,5 @@
 package com.ml.nlp.parser;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.htmlparser.NodeFilter;
@@ -10,6 +7,7 @@ import org.htmlparser.Parser;
 import org.htmlparser.util.ParserException;
 
 import com.ml.model.News;
+import com.ml.util.TimeUtils;
 
 public abstract class AbstractNewsParser implements IParser<News> {
 	
@@ -74,7 +72,7 @@ public abstract class AbstractNewsParser implements IParser<News> {
     	news.setTitle(title);
     	news.setAuthor(author);
     	news.setContent(content);	//compress content
-    	Date d = extractDate(date);
+    	Date d = TimeUtils.extractDate(date);
     	news.setDate(d);
     	
     	news.setUrl(url);	//short url
@@ -84,16 +82,6 @@ public abstract class AbstractNewsParser implements IParser<News> {
     	return news;
     }
     
-    private Date extractDate(String content) {
-		DateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日HH:mm");
-		try {
-			Date date = sdf.parse(content);
-			System.out.println(date);
-			return date;
-		} catch (ParseException e) {
-			System.out.println(e.getMessage());
-		}
-		return null;
-	}
+    
     
 }
